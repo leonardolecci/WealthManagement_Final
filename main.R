@@ -96,6 +96,35 @@ for(i in 1:nrow(joined_monthly_returns)){
 }
 stock_vector_port <- append(stock_vector, "portfolio")
 
+# Calculate 12, 24, 36, 48, 60 months returns per holding and portfolio
+
+annual_df <- as.data.frame(NULL)
+one_length <- nrow(one_montlhy_returns)
+ret_vector_12_months <- c(NULL)
+ret_vector_24_months <- c(NULL)
+ret_vector_36_months <- c(NULL)
+ret_vector_48_months <- c(NULL)
+ret_vector_60_months <- c(NULL)
+for(i in 1:(length_vector+1)){
+  ret_vector_12_months <- append(ret_vector_12_months, sum(one_montlhy_returns[(one_length-11):one_length,i], na.rm=TRUE))
+  ret_vector_24_months <- append(ret_vector_24_months, sum(one_montlhy_returns[(one_length-23):one_length,i], na.rm=TRUE))
+  ret_vector_36_months <- append(ret_vector_36_months, sum(one_montlhy_returns[(one_length-35):one_length,i], na.rm=TRUE))
+  ret_vector_48_months <- append(ret_vector_48_months, sum(one_montlhy_returns[(one_length-47):one_length,i], na.rm=TRUE))
+  ret_vector_60_months <- append(ret_vector_60_months, sum(one_montlhy_returns[(one_length-59):one_length,i], na.rm=TRUE))
+}
+annual_df <- rowSums(one_montlhy_returns[,i], na.rm=TRUE)
+
+
+annual_df <- as.data.frame(ret_vector_12_months)
+annual_df <- cbind(annual_df, ret_vector_24_months)
+annual_df <- cbind(annual_df, ret_vector_36_months)
+annual_df <- cbind(annual_df, ret_vector_48_months)
+annual_df <- cbind(annual_df, ret_vector_60_months)
+
+n_months <- c("12_Months", "24_Months", "36_Months", "48_Months", "60_Months")
+rownames(annual_df) <- stock_vector_port
+colnames(annual_df) <- n_months
+
 # INVESTMENT RISK
 
 # Calculating sigma to show total risk for assets and portfolio
@@ -126,8 +155,8 @@ sigma_df <- cbind(sigma_df, sigma_vector_36_months)
 sigma_df <- cbind(sigma_df, sigma_vector_48_months)
 sigma_df <- cbind(sigma_df, sigma_vector_60_months)
 
+
 rownames(sigma_df) <- stock_vector_port
-n_months <- c("12_Months", "24_Months", "36_Months", "48_Months", "60_Months")
 colnames(sigma_df) <- n_months
 
 # TRACKING ERROR
