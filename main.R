@@ -153,7 +153,7 @@ sigma_df <- cbind(sigma_df, sigma_vector_60_months)
 
 rownames(sigma_df) <- stock_vector_port
 colnames(sigma_df) <- n_months
-write.table(sigma_df, file = "sigma_df.csv", sep = ",", quote = FALSE)
+#write.table(sigma_df, file = "sigma_df.csv", sep = ",", quote = FALSE)
 
 # TRACKING ERROR
 # Adding BlackRock 60/40 Target Allocation Fund Institutional Shares: BIGPX as benchmark for the client
