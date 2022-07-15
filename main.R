@@ -29,7 +29,7 @@ joined_prices <- NULL
 adj_position <- c(NULL)
 
 
-# loop to get alll the values of stock through quantmod
+# loop to get all the values of stock through quantmod
 for(i in 1:length_vector){
   stock_values <- NULL
   stock_values <- getSymbols(stock_vector[i], auto.assign = FALSE)
@@ -40,14 +40,11 @@ for(i in 1:length_vector){
 }
 
 # Step 2: pulling in only adjusted prices
-joined_prices_only <- joined_prices[,adj_position]
-
+joined_prices <- joined_prices[,adj_position]
+joined_prices <- as.data.frame(joined_prices)
 #Step 3: calculate returns
 
 # Version 1 (more complex and used in real life work)
-
-
-joined_returns_loop <- as.data.frame(joined_prices_only)
 
 # User Defined Function to add time window
 window_returns <- function(x, t){
@@ -66,13 +63,13 @@ trading_days_month <- 25
 
 # for cycle for combining all log returns in a single df
 for(i in 1:length_vector){
-  joined_monthly_returns <- cbind(joined_monthly_returns, window_returns(x=joined_returns_loop[,i], t=25))
+  joined_monthly_returns <- cbind(joined_monthly_returns, window_returns(x=joined_prices[,i], t=25))
 }
 
 joined_monthly_returns <- as.data.frame(joined_monthly_returns)
 
 # Calculating portfolio return
-# This is not precise for old values, protfolio allocation changes over time, this assumes a fiexd allocation for the past
+# This is not precise for old values, portfolio allocation changes over time, this assumes a fiexd allocation for the past
 
 # Getting weight in portfolio for each stock
 stock_weight <- c(NULL)
@@ -83,20 +80,21 @@ for(p in 1:length_vector){
 # creating a vector with proportional return for each stock
 
 prop_returns <- c(NULL)
-
 for(i in 1:length_vector){
   prop_returns <- append(prop_returns, joined_monthly_returns[i]*stock_weight[i])
 }
-
 prop_returns <- as.data.frame(prop_returns)
 
 # Add column for portfolio's monthly return and add all monthly returns
 for(i in 1:nrow(joined_monthly_returns)){
-  joined_monthly_returns$portfolio[i] <- rowSums(prop_returns[i,],na.rm=TRUE)
+  joined_monthly_returns$portfolio[i] <- sum(prop_returns[i,],na.rm=TRUE)
 }
 stock_vector_port <- append(stock_vector, "portfolio")
 
 # Calculate 12, 24, 36, 48, 60 months returns per holding and portfolio
+# Taking only every 25th elements of the monthly returns
+one_montlhy_returns <- as.data.frame(NULL)
+one_montlhy_returns <-  joined_monthly_returns[seq(25, nrow(joined_monthly_returns), 25), ]
 
 annual_df <- as.data.frame(NULL)
 one_length <- nrow(one_montlhy_returns)
@@ -105,6 +103,7 @@ ret_vector_24_months <- c(NULL)
 ret_vector_36_months <- c(NULL)
 ret_vector_48_months <- c(NULL)
 ret_vector_60_months <- c(NULL)
+
 for(i in 1:(length_vector+1)){
   ret_vector_12_months <- append(ret_vector_12_months, sum(one_montlhy_returns[(one_length-11):one_length,i], na.rm=TRUE))
   ret_vector_24_months <- append(ret_vector_24_months, sum(one_montlhy_returns[(one_length-23):one_length,i], na.rm=TRUE))
@@ -112,8 +111,6 @@ for(i in 1:(length_vector+1)){
   ret_vector_48_months <- append(ret_vector_48_months, sum(one_montlhy_returns[(one_length-47):one_length,i], na.rm=TRUE))
   ret_vector_60_months <- append(ret_vector_60_months, sum(one_montlhy_returns[(one_length-59):one_length,i], na.rm=TRUE))
 }
-annual_df <- rowSums(one_montlhy_returns[,i], na.rm=TRUE)
-
 
 annual_df <- as.data.frame(ret_vector_12_months)
 annual_df <- cbind(annual_df, ret_vector_24_months)
@@ -125,13 +122,11 @@ n_months <- c("12_Months", "24_Months", "36_Months", "48_Months", "60_Months")
 rownames(annual_df) <- stock_vector_port
 colnames(annual_df) <- n_months
 
+#write.table(annual_df, file = "annual_df.csv", sep = ",", quote = FALSE)
+
 # INVESTMENT RISK
 
 # Calculating sigma to show total risk for assets and portfolio
-
-# Taking only every 25th elements of the monthly returns
-one_montlhy_returns <- as.data.frame(NULL)
-one_montlhy_returns <-  joined_monthly_returns[seq(25, nrow(joined_monthly_returns), 25), ]
 
 
 time_index <- nrow(one_montlhy_returns)
@@ -158,6 +153,7 @@ sigma_df <- cbind(sigma_df, sigma_vector_60_months)
 
 rownames(sigma_df) <- stock_vector_port
 colnames(sigma_df) <- n_months
+write.table(sigma_df, file = "sigma_df.csv", sep = ",", quote = FALSE)
 
 # TRACKING ERROR
 # Adding BlackRock 60/40 Target Allocation Fund Institutional Shares: BIGPX as benchmark for the client
@@ -313,4 +309,16 @@ names(ff3f_list) <- stock_vector
 source("http://www.sthda.com/upload/rquery_cormat.r")
 # calling a function from the source above
 
+rquery.cormat(one_montlhy_returns[(time_index-11):time_index,])
 rquery.cormat(one_montlhy_returns[(time_index-23):time_index,])
+rquery.cormat(one_montlhy_returns[(time_index-35):time_index,])
+rquery.cormat(one_montlhy_returns[(time_index-47):time_index,])
+rquery.cormat(one_montlhy_returns[(time_index-59):time_index,])
+
+
+
+
+
+
+#cor(joined_monthly_returns[(time_index-23):time_index,],use="complete.obs")
+
