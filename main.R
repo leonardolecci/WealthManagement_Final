@@ -7,6 +7,7 @@
 #install.packages("quantmod")
 
 library(quantmod)
+library(data.table)
 library(corrplot)
 source("./famafrench.R")
 
@@ -25,26 +26,32 @@ for(p in 1:dim_portfolio){
 length_vector <- length(stock_vector)
 
 #initializing joined_prices df, and vector to calculate positions for pulling only adjusted prices
-joined_prices <- NULL
+
+joined_prices_total <- NULL
 adj_position <- c(NULL)
-
-
+open_position <- c(NULL)
 # loop to get all the values of stock through quantmod
 for(i in 1:length_vector){
   stock_values <- NULL
   stock_values <- getSymbols(stock_vector[i], auto.assign = FALSE)
-  joined_prices <- cbind(joined_prices, stock_values)
+  joined_prices_total <- cbind(joined_prices_total, stock_values)
   # We know adj. price is in the 6th column for each stock
   # so we multiply each cycle by 6 to get the positions for each stock
+  open_position <- append(open_position, i*6-5)
   adj_position <- append(adj_position, i*6)
 }
 
-# Step 2: pulling in only adjusted prices
-joined_prices <- joined_prices[,adj_position]
-joined_prices <- as.data.frame(joined_prices)
-#Step 3: calculate returns
 
-# Version 1 (more complex and used in real life work)
+# Step 2: pulling in only adjusted prices
+joined_prices <- joined_prices_total[,adj_position]
+joined_prices <- as.data.frame(joined_prices)
+
+# getting open and adjusted prices for Fama French
+portfolio_open <- joined_prices_total[,open_position]
+portfolio_open <- as.data.frame(portfolio_open)
+
+
+#Step 3: calculate returns
 
 # User Defined Function to add time window
 window_returns <- function(x, t){
@@ -59,14 +66,20 @@ window_returns <- function(x, t){
 # t=25 for the trading days per month
 
 joined_monthly_returns <- NULL
+joined_monthly_returns_open <- NULL
 trading_days_month <- 25
 
-# for cycle for combining all log returns in a single df
+# for cycle for combining all log returns of adjusted prices in a single df
 for(i in 1:length_vector){
   joined_monthly_returns <- cbind(joined_monthly_returns, window_returns(x=joined_prices[,i], t=25))
 }
-
 joined_monthly_returns <- as.data.frame(joined_monthly_returns)
+
+# for cycle to get log return for open  prices
+for(i in 1:(length_vector)){
+  joined_monthly_returns_open <- cbind(joined_monthly_returns_open, window_returns(x=portfolio_open[,i], t=25))
+}
+joined_monthly_returns_open <- as.data.frame(joined_monthly_returns_open)
 
 # Calculating portfolio return
 # This is not precise for old values, portfolio allocation changes over time, this assumes a fiexd allocation for the past
@@ -85,11 +98,27 @@ for(i in 1:length_vector){
 }
 prop_returns <- as.data.frame(prop_returns)
 
+# creating a vector with proportional returns for each stock open prices
+prop_returns_open <- c(NULL)
+for(i in 1:(length_vector)){
+prop_returns_open <- append(prop_returns_open, joined_monthly_returns_open[i]*stock_weight[i])
+}
+prop_returns_open <- as.data.frame(prop_returns_open)
+
 # Add column for portfolio's monthly return and add all monthly returns
 for(i in 1:nrow(joined_monthly_returns)){
   joined_monthly_returns$portfolio[i] <- sum(prop_returns[i,],na.rm=TRUE)
 }
 stock_vector_port <- append(stock_vector, "portfolio")
+
+# create df for portfolio open & adjusted
+portfolio_return_open <- data.frame(portfolio.Open = numeric(0),
+                                    portfolio.Adjusted = numeric(0))
+for(i in 1:nrow(joined_monthly_returns_open)){
+  portfolio_return_open[i,1] <- sum(joined_monthly_returns_open[i,],na.rm=TRUE)
+  portfolio_return_open[i,2] <- joined_monthly_returns$portfolio[i]
+}
+
 
 # Calculate 12, 24, 36, 48, 60 months returns per holding and portfolio
 # Taking only every 25th elements of the monthly returns
@@ -195,7 +224,7 @@ te_df <- cbind(te_df, te_vector_60_months)
 
 rownames(te_df) <- stock_vector_port
 colnames(te_df) <- n_months
-
+#write.table(te_df, file = "te_df.csv", sep = ",", quote = FALSE)
 
 # Sharpe ratio
 
@@ -224,7 +253,7 @@ sharpe_df <- cbind(sharpe_df, sharpe_vector_60_months)
 
 rownames(sharpe_df) <- stock_vector_port
 colnames(sharpe_df) <- n_months
-
+write.table(sharpe_df, file = "sharpe_df.csv", sep = ",", quote = FALSE)
 
 # See lm modelling
 last_12 <- one_montlhy_returns[(time_index-11):time_index,]
@@ -292,8 +321,22 @@ for(i in 1:(length_vector)){
   ff3f_list <- append(ff3f_list, list(reg_ff3f_list))
 }
 
-names(ff3f_list) <- stock_vector
 
+# Fama French for portfolio
+time_index_dayly <- nrow(joined_monthly_returns)
+reg_ff3f_12 <- fama_french_3F_portfolio(port = portfolio_return_open[(time_index_dayly-364):time_index_dayly,], from_date = begin_date_12, to_date = today)
+reg_ff3f_24 <- fama_french_3F_portfolio(port = portfolio_return_open[(time_index_dayly-729):time_index_dayly,], from_date = begin_date_24, to_date = today)
+reg_ff3f_36 <- fama_french_3F_portfolio(port = portfolio_return_open[(time_index_dayly-1094):time_index_dayly,], from_date = begin_date_36, to_date = today)
+reg_ff3f_48 <- fama_french_3F_portfolio(port = portfolio_return_open[(time_index_dayly-1459):time_index_dayly,], from_date = begin_date_48, to_date = today)
+reg_ff3f_60 <- fama_french_3F_portfolio(port = portfolio_return_open[(time_index_dayly-1824):time_index_dayly,], from_date = begin_date_60, to_date = today)
+reg_ff3f_list <- list(reg_ff3f_12, reg_ff3f_24, reg_ff3f_36, reg_ff3f_48, reg_ff3f_60)
+
+names(reg_ff3f_list) <- n_months
+ff3f_list <- append(ff3f_list, list(reg_ff3f_list))
+names(ff3f_list) <- stock_vector_port
+
+time_index_dayly <- nrow(joined_monthly_returns)
+fama_french_3F_portfolio(port = portfolio_return_open[(time_index_dayly-364):time_index_dayly,], from_date = begin_date_12, to_date = today)
 
 
 #summary(ff3f_list$stock_vector[1]$n_months[1][[2]]) 
