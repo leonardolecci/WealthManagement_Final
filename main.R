@@ -151,7 +151,7 @@ n_months <- c("12_Months", "24_Months", "36_Months", "48_Months", "60_Months")
 rownames(annual_df) <- stock_vector_port
 colnames(annual_df) <- n_months
 
-#write.table(annual_df, file = "annual_df.csv", sep = ",", quote = FALSE)
+write.table(annual_df, file = "annual_df_adjusted.csv", sep = ",", quote = FALSE)
 
 # INVESTMENT RISK
 
@@ -182,7 +182,7 @@ sigma_df <- cbind(sigma_df, sigma_vector_60_months)
 
 rownames(sigma_df) <- stock_vector_port
 colnames(sigma_df) <- n_months
-#write.table(sigma_df, file = "sigma_df.csv", sep = ",", quote = FALSE)
+write.table(sigma_df, file = "sigma_df_adjusted.csv", sep = ",", quote = FALSE)
 
 # TRACKING ERROR
 # Adding BlackRock 60/40 Target Allocation Fund Institutional Shares: BIGPX as benchmark for the client
@@ -224,7 +224,7 @@ te_df <- cbind(te_df, te_vector_60_months)
 
 rownames(te_df) <- stock_vector_port
 colnames(te_df) <- n_months
-#write.table(te_df, file = "te_df.csv", sep = ",", quote = FALSE)
+write.table(te_df, file = "te_df_adjusted.csv", sep = ",", quote = FALSE)
 
 # Sharpe ratio
 
@@ -254,6 +254,8 @@ sharpe_df <- cbind(sharpe_df, sharpe_vector_60_months)
 rownames(sharpe_df) <- stock_vector_port
 colnames(sharpe_df) <- n_months
 write.table(sharpe_df, file = "sharpe_df.csv", sep = ",", quote = FALSE)
+write.table(sharpe_df, file = "sharpe_df_adjusted.csv", sep = ",", quote = FALSE)
+
 
 # See lm modelling
 last_12 <- one_montlhy_returns[(time_index-11):time_index,]
